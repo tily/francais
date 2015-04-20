@@ -40,8 +40,5 @@
             "run_at": "document_end",
             "all_frames": false
         }
-    ],
-    "permissions": [
-      "http://9.dee.cc/"
     ]
 }
