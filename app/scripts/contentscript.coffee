@@ -1,54 +1,58 @@
 'use strict';
-# 前の検索を無効化する
 
-DEBUG = true
+# TODO: does not work properly on pages with jquery.tipsy already loaded
+# ex) http://onehackoranother.com/projects/jquery/tipsy/#
 
-debug = ()->
-  console.log.apply console, arguments if DEBUG
+format = (results)->
+  return '(non trouvée)' if results.length == 0
+  html = ''
+  for result in results
+    #html += '<strong>' + result[0] + '</strong> '
+    #text = result.slice(1, 2).join(' ')
+    text = result.join(' ')
+    texts = text.match(/.{1,100}/g)
+    for text in texts
+      html += text + '<br />'
+  html
 
-protocol = ()->
-  location.href.match(/^(https?):/)
-  RegExp.$1
+search = (word)->
+  results = []
+  #word = word.replace(/s$/i, '')
+  regexp = new RegExp("^" + word, "i")
+  for entry in window.Francais
+    if entry[0].match(regexp)
+      results.push(entry)
+  results
 
-toDefinition = (data)->
-  text = ''
-  for e, i in data
-    text += [e.mid, e.hat, e.yak, e.yor].join(" ") + "<br>"
-  text
+show = (params)->
+  tipsy = $('<div>')
+  $(document.body).append(tipsy)
+  tipsy.tipsy(trigger: 'manual', html: true)
+  tipsy.css
+    position: 'absolute'
+    visibility: 'hidden'
+    top: $(window).scrollTop() + params.clientRect.top
+    left: $(window).scrollLeft() + params.clientRect.left
+    width: params.clientRect.width
+    height: params.clientRect.height
+  tipsy.attr 'title', params.html
+  tipsy.tipsy 'show'
+  setTimeout ()->
+    $(document.body).one 'click', (e)->
+      tipsy.tipsy('hide')
+      tipsy.remove()
+  , 1000
 
-tipsy = null
-
-$(window).on 'mouseup', (e)->
+$(window).on 'mouseup', ()->
   selection = window.getSelection()
   clientRect = selection.getRangeAt(0).getBoundingClientRect()
   word = selection.toString()
 
-  return if word == ""
-  debug "[francais] word: ", word, ", clientRect: ", clientRect
+  return if word == ''
 
-  tipsy = $("<div>francais</div>")
-  $(document.body).append(tipsy)
-  tipsy.tipsy(trigger: 'manual').css
-    position: 'absolute'
-    visibility: 'hidden'
-    top: clientRect.top - 15
-    left: clientRect.left
-  tipsy.attr 'title', "Un instant ..."
-  tipsy.tipsy "show"
-  $(document.body).on 'click', (e)->
-    tipsy.tipsy("hide")
+  results = search(word)
+  #results = results.slice(0, 10)
 
-  url = protocol() + "://francais-proxy.herokuapp.com/"
-  debug "[francais] url: ", url
-
-  $.get url, {erab: 'tango', ktype: 1, mado: word}, (data)->
-    debug "[francais] data: ", data
-    if data.length == 0
-      definition = '(non trouvée)'
-    else
-      definition = toDefinition(data)
-    debug "[francais] definition: ", definition
-    tipsy.attr 'title', definition
-    tipsy.tipsy "show"
-  , 'json'
-
+  show
+    clientRect: clientRect
+    html: format(results)
